@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := sra-board-component
+PROJECT_NAME := wifi-handler-component
 
 include $(IDF_PATH)/make/project.mk
 
