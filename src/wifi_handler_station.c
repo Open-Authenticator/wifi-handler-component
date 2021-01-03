@@ -5,6 +5,7 @@ static int retry_count = 0;
 static int station_count = 0;
 static wifi_station_info_t *wifi_station_array = NULL;
 static int wifi_station_array_index = 0;
+static EventGroupHandle_t wifi_event_group;
 
 static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json);
 {
@@ -61,8 +62,8 @@ static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json
     {
         if (cJSON_IsString(ssid_iter) && cJSON_IsString(pass_iter))
         {
-            strncpy(wifi_station_array[i].ssid, ssid_iter->valuestring, WIFI_SSID_MAX_LENGTH+1);
-            strncpy(wifi_station_array[i].passkey, pass_iter->valuestring, WIFI_PASS_MAX_LENGTH+1);
+            strncpy(wifi_station_array[i].ssid, ssid_iter->valuestring, WIFI_SSID_MAX_LENGTH + 1);
+            strncpy(wifi_station_array[i].passkey, pass_iter->valuestring, WIFI_PASS_MAX_LENGTH + 1);
         }
         else
         {
@@ -79,16 +80,14 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
-        ESP_LOGI(WIFI_TAG, "connecting to wifi");
-
+        ESP_LOGI(WIFI_TAG, "connecting to wifi ssid: %s", wifi_station_array[wifi_station_array_index].ssid);
 
         wifi_config_t wifi_config = {
             .sta = {
                 .threshold_authmode = WIFI_AUTH_OPEN,
                 .pmf_cfg = {
                     .capable = true,
-                    .required = false
-                },
+                    .required = false},
             },
         };
         memcpy(wifi_config.sta.ssid, wifi_station_array[wifi_station_array_index].ssid, WIFI_SSID_MAX_LENGTH);
@@ -100,11 +99,11 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED)
     {
-        // !!! print log that connected to wifi ssid
+        ESP_LOGI(WIFI_TAG, "connected to wifi ssid (event_handler): %s", wifi_station_array[wifi_station_array_index].ssid);
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
-        // if we retried more than the retry attempts count, then load new ssid from wifi_station_info_json_
+        // if we retried less than the retry attempts count, then retry to connect, else load new ssid from wifi_station_array
         if (retry_count < RETRY_ATTEMPTS)
         {
             // increment retry_count
@@ -117,15 +116,40 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         {
             retry_count = 0;
             wifi_station_array_index++;
-            // !!! set another wifi ssid password to connect to, read wifi json from wifi_station_info_json_
+
+            if (wifi_station_array_index < station_count)
+            {
+                wifi_config_t wifi_config = {
+                    .sta = {
+                        .threshold_authmode = WIFI_AUTH_OPEN,
+                        .pmf_cfg = {
+                            .capable = true,
+                            .required = false},
+                    },
+                };
+                memcpy(wifi_config.sta.ssid, wifi_station_array[wifi_station_array_index].ssid, WIFI_SSID_MAX_LENGTH);
+                memcpy(wifi_config.sta.password, wifi_station_array[wifi_station_array_index].passkey, WIFI_PASS_MAX_LENGTH);
+                ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
+
+                // connect to wifi, since wifi driver was setup correctly
+                ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_connect());
+            }
+            else
+            {
+                // set wifi fail event group bit
+                xEventGroupSetBits(wifi_event_group, WIFI_FAIL_BIT);
+            }
         }
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
-        // !!! read event data and print assigned IP address to log
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(WIFI_TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+
         retry_count = 0;
+        wifi_station_array_index = 0;
+        // set wifi connected event group bit
+        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
 
@@ -142,11 +166,14 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
  **/
 esp_err_t start_wifi_station(char *wifi_station_info_json)
 {
+    // create event group for wifi state
+    wifi_event_group = xEventGroupCreate();
+
     // !!! check for length of wifi_station_info_json, it should not cross a specific length. possibly use strncpy
     // copy the json string containing wifi station to try to connect to
     char *wifi_station_info_json_ = calloc(strlen(wifi_station_info_json) + 1, sizeof(char));
     strcpy(wifi_station_info_json_, wifi_station_info_json);
-    parse_wifi_station_info_json((const char *)wifi_station_info_json_);
+    ESP_ERROR_CHECK_WITHOUT_ABORT(parse_wifi_station_info_json((const char *)wifi_station_info_json_));
     free(wifi_station_info_json_);
 
     // create LwIP core task and init LwIP related work.
@@ -176,10 +203,48 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
     // set wifi power saving mode to max power save
     ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
 
-    // !!! clarify if event group bits thing is actually needed
-    // !!! unregister the event_id
-    // !!! delete event group
+    // Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
+    // number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above)
+    EventBits_t bits = xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+
+    // xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually happened.
+    if (bits & WIFI_CONNECTED_BIT)
+    {
+        ESP_LOGI(WIFI_TAG, "connected to wifi ssid (event_group): %s", wifi_station_array[wifi_station_array_index].ssid);
+    }
+    else if (bits & WIFI_FAIL_BIT)
+    {
+        ESP_LOGI(WIFI_TAG, "Failed to connect to any wifi stations from ssid list passed to start_wifi_station()");
+    }
+    else
+    {
+        ESP_LOGE(WIFI_TAG, "unexpected event");
+    }
+
+    // Since, we have successfully connected or failed to connect to wifi after all attempts.
+    // We can unregister the event handler and return either ESP_OK or ESP_FAIL.
+    // The event will not be processed after unregister.
+    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
+    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
+
+    // only if wifi is connected successfully return ESP_OK
+    if (bits & WIFI_CONNECTED_BIT)
+    {
+        vEventGroupDelete(wifi_event_group);
+        return ESP_OK;
+    }
+
+    // delete wifi event group.
+    vEventGroupDelete(wifi_event_group);
+    return ESP_FAIL;
 }
 
-// don't forget to free wifi_station_array
-esp_err_t stop_wifi_station();
+esp_err_t stop_wifi_station()
+{
+    free(wifi_station_array);
+    esp_wifi_disconnect();
+    esp_wifi_stop();
+    esp_wifi_deinit();
+
+    return ESP_OK;
+}

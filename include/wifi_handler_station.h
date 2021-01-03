@@ -22,6 +22,9 @@
 #define WIFI_PASS_MAX_LENGTH 64
 #define WIFI_MAX_STATIONS 10
 
+#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
+
 typedef struct wifi_station_info
 {
     char ssid[WIFI_SSID_MAX_LENGTH+1];
