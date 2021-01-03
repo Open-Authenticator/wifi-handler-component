@@ -15,4 +15,6 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
+esp_err_t start_wifi_station(char *ssid, char *pass);
+esp_err_t stop_wifi_station();
 #endif
