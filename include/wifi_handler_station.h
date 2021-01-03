@@ -10,11 +10,25 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_pm.h"
-#include "nvs_flash.h"
+#include "cJSON/cJSON.h"
 
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
-esp_err_t start_wifi_station(char *ssid, char *pass);
+#define RETRY_ATTEMPTS 2
+// https://serverfault.com/questions/45439/what-is-the-maximum-length-of-a-wifi-access-points-ssid
+// https://www.reddit.com/r/homeautomation/comments/cln344/wifi_password_length_limit_on_connected_devices/
+#define WIFI_SSID_MAX_LENGTH 32
+#define WIFI_PASS_MAX_LENGTH 64
+#define WIFI_MAX_STATIONS 10
+
+typedef struct wifi_station_info
+{
+    char ssid[WIFI_SSID_MAX_LENGTH+1];
+    char passkey[WIFI_PASS_MAX_LENGTH+1];
+} wifi_station_info_t;
+
+esp_err_t start_wifi_station(char *wifi_station_info_json);
 esp_err_t stop_wifi_station();
+
 #endif
