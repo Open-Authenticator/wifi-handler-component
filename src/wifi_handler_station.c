@@ -215,7 +215,7 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
     // start wifi and send event WIFI_EVENT_STA_START to event handler
     ESP_ERROR_CHECK(esp_wifi_start());
     // set wifi power saving mode to max power save
-    ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
+    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
 
     // Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
     // number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above)
@@ -260,5 +260,6 @@ esp_err_t stop_wifi_station()
     esp_wifi_stop();
     esp_wifi_deinit();
 
+    ESP_LOGI(WIFI_TAG, "disconnected from wifi");
     return ESP_OK;
 }
