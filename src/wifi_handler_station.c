@@ -24,7 +24,7 @@ static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json
 
     if (cJSON_HasObjectItem(root, "c"))
     {
-        station_count = cJSON_GetObjectItem(root, "station_count")->valueint;
+        station_count = cJSON_GetObjectItem(root, "c")->valueint;
         station_count = station_count <= WIFI_MAX_STATIONS ? station_count : 5;
         station_count = station_count >= 0 ? station_count : 0;
     }
@@ -45,6 +45,7 @@ static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json
 
         if (cJSON_GetArraySize(ssid_array) != station_count && cJSON_GetArraySize(pass_array) != station_count)
         {
+            free(wifi_station_array);
             cJSON_Delete(root);
             return ESP_FAIL;
         }
@@ -54,6 +55,7 @@ static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json
     }
     else
     {
+        free(wifi_station_array);
         cJSON_Delete(root);
         return ESP_FAIL;
     }
@@ -67,6 +69,7 @@ static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json
         }
         else
         {
+            free(wifi_station_array);
             cJSON_Delete(root);
             return ESP_FAIL;
         }
@@ -95,7 +98,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
 
         // connect to wifi, since wifi driver was setup correctly
-        ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_connect());
+        esp_wifi_connect();
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_CONNECTED)
     {
@@ -110,7 +113,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
             retry_count++;
             ESP_LOGI(WIFI_TAG, "connecting to wifi (retry %d)", retry_count);
             // retry connecting to wifi
-            ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_connect());
+            esp_wifi_connect();
         }
         else
         {
@@ -119,6 +122,8 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
 
             if (wifi_station_array_index < station_count)
             {
+                ESP_LOGI(WIFI_TAG, "connecting to wifi ssid: %s", wifi_station_array[wifi_station_array_index].ssid);
+
                 wifi_config_t wifi_config = {
                     .sta = {
                         .threshold.authmode = WIFI_AUTH_OPEN,
@@ -132,7 +137,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
                 ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
 
                 // connect to wifi, since wifi driver was setup correctly
-                ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_connect());
+                esp_wifi_connect();
             }
             else
             {
@@ -168,6 +173,15 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
 {
     // create event group for wifi state
     wifi_event_group = xEventGroupCreate();
+
+    //Initialize NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
 
     // !!! check for length of wifi_station_info_json, it should not cross a specific length. possibly use strncpy
     // copy the json string containing wifi station to try to connect to

@@ -11,6 +11,7 @@
 #include "esp_log.h"
 #include "esp_pm.h"
 #include "cJSON.h"
+#include "nvs_flash.h"
 
 #include "lwip/err.h"
 #include "lwip/sys.h"
