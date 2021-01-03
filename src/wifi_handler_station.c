@@ -7,7 +7,7 @@ static wifi_station_info_t *wifi_station_array = NULL;
 static int wifi_station_array_index = 0;
 static EventGroupHandle_t wifi_event_group;
 
-static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json);
+static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json)
 {
     station_count = 0;
     if (wifi_station_array != NULL)
@@ -84,7 +84,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
 
         wifi_config_t wifi_config = {
             .sta = {
-                .threshold_authmode = WIFI_AUTH_OPEN,
+                .threshold.authmode = WIFI_AUTH_OPEN,
                 .pmf_cfg = {
                     .capable = true,
                     .required = false},
@@ -121,7 +121,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
             {
                 wifi_config_t wifi_config = {
                     .sta = {
-                        .threshold_authmode = WIFI_AUTH_OPEN,
+                        .threshold.authmode = WIFI_AUTH_OPEN,
                         .pmf_cfg = {
                             .capable = true,
                             .required = false},
