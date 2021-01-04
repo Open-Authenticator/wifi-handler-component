@@ -6,6 +6,7 @@ static int station_count = 0;
 static wifi_station_info_t *wifi_station_array = NULL;
 static int wifi_station_array_index = 0;
 static EventGroupHandle_t wifi_event_group;
+static wifi_ap_record_t connected_station_info;
 
 static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json)
 {
@@ -156,6 +157,16 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         // set wifi connected event group bit
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
     }
+}
+
+wifi_ap_record_t* get_wifi_station_info()
+{    
+    if(esp_wifi_sta_get_ap_info(&connected_station_info) == ESP_OK)
+    {
+        return &connected_station_info;
+    }
+
+    return NULL;
 }
 
 /**

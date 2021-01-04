@@ -32,6 +32,7 @@ typedef struct wifi_station_info
     char passkey[WIFI_PASS_MAX_LENGTH+1];
 } wifi_station_info_t;
 
+wifi_ap_record_t* get_wifi_station_info();
 esp_err_t start_wifi_station(char *wifi_station_info_json);
 esp_err_t stop_wifi_station();
 
