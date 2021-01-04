@@ -1,12 +1,12 @@
 #include "wifi_handler_station.h"
 
 static const char *WIFI_TAG = "wifi_handler_station";
-static int retry_count = 0;
-static int station_count = 0;
-static wifi_station_info_t *wifi_station_array = NULL;
-static int wifi_station_array_index = 0;
-static EventGroupHandle_t wifi_event_group;
-static wifi_ap_record_t connected_station_info;
+static int retry_count = 0; /*!< varible which counts number of retry attempts */
+static int station_count = 0; /*!< variable which stores the number of stations whose ssid is passed to start_wifi_station() */
+static wifi_station_info_t *wifi_station_array = NULL; /*!< array which stores ssid/pass of stations passed to start_wifi_station() */
+static int wifi_station_array_index = 0; /*!< variable which stores the current index in wifi_station_array to which we are trying to connect */
+static EventGroupH3333333333andle_t wifi_event_group; /*!< wifi event group */
+static wifi_ap_record_t connected_station_info; /*!< stores info about wifi AP currently connected */
 
 static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json)
 {
