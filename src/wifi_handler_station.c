@@ -108,7 +108,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
         // if we retried less than the retry attempts count, then retry to connect, else load new ssid from wifi_station_array
-        if (retry_count < RETRY_ATTEMPTS)
+        if (retry_count < WIFI_RECONNECT_RETRY_ATTEMPTS)
         {
             // increment retry_count
             retry_count++;
@@ -159,9 +159,9 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     }
 }
 
-wifi_ap_record_t* get_wifi_station_info()
-{    
-    if(esp_wifi_sta_get_ap_info(&connected_station_info) == ESP_OK)
+wifi_ap_record_t *get_wifi_station_info()
+{
+    if (esp_wifi_sta_get_ap_info(&connected_station_info) == ESP_OK)
     {
         return &connected_station_info;
     }
@@ -169,17 +169,6 @@ wifi_ap_record_t* get_wifi_station_info()
     return NULL;
 }
 
-/**
- * wifi_station_info_json --> json structure is as follows:
- * 
- * {
- *    "c": 3 (max 10, int, set by macro WIFI_MAX_STATIONS),
- *    "s": ["hello", "bye", "df"],
- *    "p": ["fakee", "nice", "ddddfs"]
- * }
- * 
- * these ssid and pass are corresponding according to their array location, i.e pass of ssid[0] = pass[0] and so on
- **/
 esp_err_t start_wifi_station(char *wifi_station_info_json)
 {
     // create event group for wifi state
@@ -194,7 +183,13 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
     }
     ESP_ERROR_CHECK(ret);
 
-    // !!! check for length of wifi_station_info_json, it should not cross a specific length. possibly use strncpy
+    // check for length of wifi_station_info_json, it should not cross a specific length.
+    if (strlen(wifi_station_info_json) + 1 > WIFI_MAX_STATION_INFO_STRING_SIZE)
+    {
+        ESP_LOGI(WIFI_TAG, "wifi station info json string is longer than WIFI_MAX_STATION_INFO_STRING_SIZE (%d)", WIFI_MAX_STATION_INFO_STRING_SIZE);
+
+        return ESP_FAIL;
+    }
     // copy the json string containing wifi station to try to connect to
     char *wifi_station_info_json_ = calloc(strlen(wifi_station_info_json) + 1, sizeof(char));
     strcpy(wifi_station_info_json_, wifi_station_info_json);
