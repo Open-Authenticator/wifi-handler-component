@@ -84,21 +84,21 @@ esp_err_t start_wifi_access_point(char *ssid, char *pass)
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    wifi_config_t wifi_config = {
-        .ap = {
-            .ssid = ssid,
-            .ssid_len = strlen(ssid),
-            .channel = WIFI_CHANNEL,
-            .password = pass,
-            .max_connection = WIFI_MAX_STA_CONN,
-            .authmode = WIFI_AUTH_WPA_WPA2_PSK},
-    };
-
     // create instance of event handler, inshort kind of a handle to invoke event handler on receiving certain types of event
     esp_event_handler_instance_t instance_any_id;
 
     // register events that should be handled by the event handler, so if any wifi event, event handler function will be invoked.
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, &instance_any_id));
+
+    wifi_config_t wifi_config = {
+        .ap = {
+            .ssid_len = strlen(ssid),
+            .channel = WIFI_CHANNEL,
+            .max_connection = WIFI_MAX_STA_CONN,
+            .authmode = WIFI_AUTH_WPA_WPA2_PSK},
+    };
+    memcpy(wifi_config.ap.ssid, ssid, sizeof(wifi_config.ap.ssid));
+    memcpy(wifi_config.ap.password, pass, sizeof(wifi_config.ap.password));
 
     // set wifi mode to station, i.e. connect to other wifi networks
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
