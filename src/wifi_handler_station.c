@@ -247,15 +247,15 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
 
+    // delete wifi event group.
+    vEventGroupDelete(wifi_event_group);
+
     // only if wifi is connected successfully return ESP_OK
     if (bits & WIFI_CONNECTED_BIT)
     {
-        vEventGroupDelete(wifi_event_group);
         return ESP_OK;
     }
 
-    // delete wifi event group.
-    vEventGroupDelete(wifi_event_group);
     return ESP_FAIL;
 }
 
