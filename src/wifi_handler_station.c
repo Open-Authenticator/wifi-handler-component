@@ -1,21 +1,17 @@
 #include "wifi_handler_station.h"
 
 static const char *WIFI_TAG = "wifi_handler_station";
-static int retry_count = 0; /*!< varible which counts number of retry attempts */
-static int station_count = 0; /*!< variable which stores the number of stations whose ssid is passed to start_wifi_station() */
+static int retry_count = 0;                            /*!< varible which counts number of retry attempts */
+static int station_count = 0;                          /*!< variable which stores the number of stations whose ssid is passed to start_wifi_station() */
 static wifi_station_info_t *wifi_station_array = NULL; /*!< array which stores ssid/pass of stations passed to start_wifi_station() */
-static int wifi_station_array_index = 0; /*!< variable which stores the current index in wifi_station_array to which we are trying to connect */
-static EventGroupHandle_t wifi_event_group; /*!< wifi event group */
-static wifi_ap_record_t connected_station_info; /*!< stores info about wifi AP currently connected */
+static int wifi_station_array_index = 0;               /*!< variable which stores the current index in wifi_station_array to which we are trying to connect */
+static EventGroupHandle_t wifi_event_group;            /*!< wifi event group */
+static wifi_ap_record_t connected_station_info;        /*!< stores info about wifi AP currently connected */
+static esp_netif_t *wifi_sta_netif_handle = NULL;      /*!< sta netif handle, to be freed during stopping wifi */
 
 static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json)
 {
     station_count = 0;
-    if (wifi_station_array != NULL)
-    {
-        free(wifi_station_array);
-        wifi_station_array = NULL;
-    }
 
     cJSON *root = cJSON_Parse(wifi_station_info_json);
     if (root == NULL)
@@ -47,6 +43,7 @@ static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json
         if (cJSON_GetArraySize(ssid_array) != station_count && cJSON_GetArraySize(pass_array) != station_count)
         {
             free(wifi_station_array);
+            wifi_station_array = NULL;
             cJSON_Delete(root);
             return ESP_FAIL;
         }
@@ -57,6 +54,7 @@ static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json
     else
     {
         free(wifi_station_array);
+        wifi_station_array = NULL;
         cJSON_Delete(root);
         return ESP_FAIL;
     }
@@ -71,6 +69,7 @@ static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json
         else
         {
             free(wifi_station_array);
+            wifi_station_array = NULL;
             cJSON_Delete(root);
             return ESP_FAIL;
         }
@@ -195,13 +194,17 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
     strcpy(wifi_station_info_json_, wifi_station_info_json);
     ESP_ERROR_CHECK_WITHOUT_ABORT(parse_wifi_station_info_json((const char *)wifi_station_info_json_));
     free(wifi_station_info_json_);
-
+    
     // create LwIP core task and init LwIP related work.
     ESP_ERROR_CHECK(esp_netif_init());
     // create event loop to handle WiFi related events.
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     // create default network interface instance binding station with TCP/IP stack.
-    esp_netif_create_default_wifi_sta();
+    if (wifi_sta_netif_handle != NULL)
+    {
+        esp_netif_destroy(wifi_sta_netif_handle);
+    }
+    wifi_sta_netif_handle = esp_netif_create_default_wifi_sta();
 
     // create the Wi-Fi driver task and initialize the Wi-Fi driver.
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -261,7 +264,16 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
 
 esp_err_t stop_wifi_station()
 {
+    retry_count = 0;
+    station_count = 0;
     free(wifi_station_array);
+    wifi_station_array = NULL;
+    wifi_station_array_index = 0;
+    
+    esp_event_loop_delete_default();
+    esp_netif_destroy(wifi_sta_netif_handle);
+    wifi_sta_netif_handle = NULL;
+
     esp_wifi_disconnect();
     esp_wifi_stop();
     esp_wifi_deinit();

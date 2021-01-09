@@ -4,7 +4,8 @@ static const char *WIFI_TAG = "wifi_handler_access_point";
 static wifi_ap_record_t *wifi_station_array = NULL;
 static uint16_t wifi_station_count = 0;
 static bool wifi_station_connected_status = false;
-static EventGroupHandle_t wifi_event_group; /*!< wifi event group */
+static EventGroupHandle_t wifi_event_group;      /*!< wifi event group */
+static esp_netif_t *wifi_ap_netif_handle = NULL; /*!< sta netif handle, to be freed during stopping wifi */
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
@@ -78,7 +79,11 @@ esp_err_t start_wifi_access_point(char *ssid, char *pass)
     // create event loop to handle WiFi related events.
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     // create default network interface instance binding station with TCP/IP stack.
-    esp_netif_create_default_wifi_ap();
+    if (wifi_ap_netif_handle != NULL)
+    {
+        esp_netif_destroy(wifi_ap_netif_handle);
+    }
+    wifi_ap_netif_handle = esp_netif_create_default_wifi_ap();
 
     // create the Wi-Fi driver task and initialize the Wi-Fi driver.
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -142,14 +147,16 @@ esp_err_t start_wifi_access_point(char *ssid, char *pass)
 
 esp_err_t stop_wifi_access_point()
 {
-    if (wifi_station_array != NULL)
-    {
-        free(wifi_station_array);
-        wifi_station_array = NULL;
-    }
+    free(wifi_station_array);
+    wifi_station_array = NULL;
     wifi_station_count = 0;
     wifi_station_connected_status = false;
 
+    esp_event_loop_delete_default();
+    esp_netif_destroy(wifi_ap_netif_handle);
+    wifi_ap_netif_handle = NULL;
+
+    esp_wifi_deauth_sta(0);
     esp_wifi_stop();
     esp_wifi_deinit();
 
