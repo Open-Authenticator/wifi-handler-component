@@ -194,7 +194,7 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
     strcpy(wifi_station_info_json_, wifi_station_info_json);
     ESP_ERROR_CHECK_WITHOUT_ABORT(parse_wifi_station_info_json((const char *)wifi_station_info_json_));
     free(wifi_station_info_json_);
-    
+
     // create LwIP core task and init LwIP related work.
     ESP_ERROR_CHECK(esp_netif_init());
     // create event loop to handle WiFi related events.
@@ -269,14 +269,15 @@ esp_err_t stop_wifi_station()
     free(wifi_station_array);
     wifi_station_array = NULL;
     wifi_station_array_index = 0;
-    
-    esp_event_loop_delete_default();
-    esp_netif_destroy(wifi_sta_netif_handle);
-    wifi_sta_netif_handle = NULL;
 
     esp_wifi_disconnect();
     esp_wifi_stop();
     esp_wifi_deinit();
+
+    esp_event_loop_delete_default();
+    ESP_ERROR_CHECK(esp_wifi_clear_default_wifi_driver_and_handlers(wifi_sta_netif_handle)); 
+    esp_netif_destroy(wifi_sta_netif_handle);
+    wifi_sta_netif_handle = NULL;
 
     ESP_LOGI(WIFI_TAG, "disconnected from wifi");
     return ESP_OK;
