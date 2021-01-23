@@ -41,13 +41,7 @@ wifi_ap_record_t *scan_wifi_access_point()
 {
     if (esp_wifi_scan_start(NULL, true) == ESP_OK)
     {
-        if (wifi_station_array != NULL)
-        {
-            free(wifi_station_array);
-            wifi_station_count = 0;
-            wifi_station_array = NULL;
-        }
-
+        free(wifi_station_array);
         ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&wifi_station_count));
         wifi_station_array = calloc(wifi_station_count, sizeof(wifi_ap_record_t));
 
@@ -111,8 +105,6 @@ esp_err_t start_wifi_access_point(char *ssid, char *pass)
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
     // start wifi and send event WIFI_EVENT_STA_START to event handler
     ESP_ERROR_CHECK(esp_wifi_start());
-    // set wifi power saving mode to max power save
-    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
 
     // Wait until some station connects to the access point (WIFI_STA_CONNECTED_BIT) or no station has connected yet (WIFI_STA_DISCONNECTED_BIT).
     // The bits are set by event_handler() (see above)
@@ -153,6 +145,7 @@ esp_err_t stop_wifi_access_point()
     wifi_station_connected_status = false;
 
     esp_event_loop_delete_default();
+    ESP_ERROR_CHECK(esp_wifi_clear_default_wifi_driver_and_handlers(wifi_ap_netif_handle)); 
     esp_netif_destroy(wifi_ap_netif_handle);
     wifi_ap_netif_handle = NULL;
 
