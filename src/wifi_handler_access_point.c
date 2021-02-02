@@ -6,6 +6,7 @@ static uint16_t wifi_station_count = 0;
 static bool wifi_station_connected_status = false;
 static EventGroupHandle_t wifi_event_group;      /*!< wifi event group */
 static esp_netif_t *wifi_ap_netif_handle = NULL; /*!< sta netif handle, to be freed during stopping wifi */
+static bool is_connected = false;
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
@@ -55,6 +56,14 @@ wifi_ap_record_t *scan_wifi_access_point()
 
 esp_err_t start_wifi_access_point(char *ssid, char *pass)
 {
+    // if access point is already working, don't try to run this function
+
+    if (is_connected)
+    {
+        ESP_LOGE(WIFI_TAG, "Access point already running, call stop_wifi_access_point() before calling this");
+        return ESP_FAIL;
+    }
+
     // create event group for wifi state
     wifi_event_group = xEventGroupCreate();
 
@@ -128,6 +137,8 @@ esp_err_t start_wifi_access_point(char *ssid, char *pass)
     // delete wifi event group.
     vEventGroupDelete(wifi_event_group);
 
+    is_connected = true;
+
     // only if wifi is connected successfully return ESP_OK
     if (bits & WIFI_STA_CONNECTED_BIT)
     {
@@ -139,6 +150,13 @@ esp_err_t start_wifi_access_point(char *ssid, char *pass)
 
 esp_err_t stop_wifi_access_point()
 {
+    // if wifi is not connected no point in stopping it
+    if (!is_connected)
+    {
+        ESP_LOGE(WIFI_TAG, "Wifi access point not running, no need to stop it");
+        return ESP_FAIL;
+    }
+
     free(wifi_station_array);
     wifi_station_array = NULL;
     wifi_station_count = 0;
@@ -154,5 +172,8 @@ esp_err_t stop_wifi_access_point()
     esp_wifi_deinit();
 
     ESP_LOGI(WIFI_TAG, "stopped wifi access point");
+
+    is_connected = false;
+
     return ESP_OK;
 }

@@ -8,6 +8,7 @@ static int wifi_station_array_index = 0;               /*!< variable which store
 static EventGroupHandle_t wifi_event_group;            /*!< wifi event group */
 static wifi_ap_record_t connected_station_info;        /*!< stores info about wifi AP currently connected */
 static esp_netif_t *wifi_sta_netif_handle = NULL;      /*!< sta netif handle, to be freed during stopping wifi */
+static bool is_connected = false;
 
 static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json)
 {
@@ -170,6 +171,13 @@ wifi_ap_record_t *get_wifi_station_info()
 
 esp_err_t start_wifi_station(char *wifi_station_info_json)
 {
+    // if wifi is already connected, don't try to run this function
+    if (is_connected)
+    {
+        ESP_LOGE(WIFI_TAG, "Wifi station already running, call stop_wifi_station() before calling this");
+        return ESP_FAIL;
+    }
+
     // create event group for wifi state
     wifi_event_group = xEventGroupCreate();
 
@@ -253,6 +261,9 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
     // delete wifi event group.
     vEventGroupDelete(wifi_event_group);
 
+    // set state of connected variable
+    is_connected = true;
+
     // only if wifi is connected successfully return ESP_OK
     if (bits & WIFI_CONNECTED_BIT)
     {
@@ -264,6 +275,13 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
 
 esp_err_t stop_wifi_station()
 {
+    // if wifi is not connected no point in stopping it
+    if (!is_connected)
+    {
+        ESP_LOGE(WIFI_TAG, "Wifi station not running, no need to stop it");
+        return ESP_FAIL;
+    }
+
     retry_count = 0;
     station_count = 0;
     free(wifi_station_array);
@@ -280,5 +298,8 @@ esp_err_t stop_wifi_station()
     wifi_sta_netif_handle = NULL;
 
     ESP_LOGI(WIFI_TAG, "disconnected from wifi");
+
+    is_connected = false;
+
     return ESP_OK;
 }
