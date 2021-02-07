@@ -20,6 +20,8 @@
 #define WIFI_MAX_STA_CONN 1
 #define WIFI_SCAN_LIST_SIZE 10
 #define WIFI_STA_CONNECTED_BIT BIT0    /*!< used in event group, this bit represents connected bit */
+#define WIFI_ERR_NOT_CONNECTED -2
+#define WIFI_ERR_ALREADY_RUNNING -3
 
 bool is_wifi_station_connected();
 uint16_t wifi_access_point_list_size();

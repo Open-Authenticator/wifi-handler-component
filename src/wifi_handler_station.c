@@ -175,7 +175,7 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
     if (is_connected)
     {
         ESP_LOGE(WIFI_TAG, "Wifi station already running, call stop_wifi_station() before calling this");
-        return ESP_FAIL;
+        return WIFI_ERR_ALREADY_RUNNING;
     }
 
     // create event group for wifi state
@@ -195,7 +195,7 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
     {
         ESP_LOGI(WIFI_TAG, "wifi station info json string is longer than WIFI_MAX_STATION_INFO_STRING_SIZE (%d)", WIFI_MAX_STATION_INFO_STRING_SIZE);
 
-        return ESP_FAIL;
+        return WIFI_ERR_STA_INFO;
     }
     // copy the json string containing wifi station to try to connect to
     char *wifi_station_info_json_ = calloc(strlen(wifi_station_info_json) + 1, sizeof(char));
@@ -270,7 +270,7 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
         return ESP_OK;
     }
 
-    return ESP_FAIL;
+    return WIFI_ERR_NOT_CONNECTED;
 }
 
 esp_err_t stop_wifi_station()
@@ -279,7 +279,7 @@ esp_err_t stop_wifi_station()
     if (!is_connected)
     {
         ESP_LOGE(WIFI_TAG, "Wifi station not running, no need to stop it");
-        return ESP_FAIL;
+        return WIFI_ERR_ALREADY_RUNNING;
     }
 
     retry_count = 0;

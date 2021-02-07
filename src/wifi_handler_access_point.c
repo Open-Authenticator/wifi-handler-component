@@ -61,7 +61,7 @@ esp_err_t start_wifi_access_point(char *ssid, char *pass)
     if (is_connected)
     {
         ESP_LOGE(WIFI_TAG, "Access point already running, call stop_wifi_access_point() before calling this");
-        return ESP_FAIL;
+        return WIFI_ERR_ALREADY_RUNNING;
     }
 
     // create event group for wifi state
@@ -145,7 +145,7 @@ esp_err_t start_wifi_access_point(char *ssid, char *pass)
         return ESP_OK;
     }
 
-    return ESP_FAIL;
+    return WIFI_ERR_NOT_CONNECTED;
 }
 
 esp_err_t stop_wifi_access_point()
@@ -154,7 +154,7 @@ esp_err_t stop_wifi_access_point()
     if (!is_connected)
     {
         ESP_LOGE(WIFI_TAG, "Wifi access point not running, no need to stop it");
-        return ESP_FAIL;
+        return WIFI_ERR_ALREADY_RUNNING;
     }
 
     free(wifi_station_array);

@@ -23,7 +23,9 @@
 #define WIFI_MAX_STATION_INFO_STRING_SIZE 1040 /*!< max size of station info string */
 #define WIFI_CONNECTED_BIT BIT0                /*!< used in event group, this bit represents connected bit */
 #define WIFI_FAIL_BIT BIT1                     /*!< used in event group, this bit represents the disconnected bit */
-
+#define WIFI_ERR_NOT_CONNECTED -2
+#define WIFI_ERR_ALREADY_RUNNING -3
+#define WIFI_ERR_STA_INFO -4
 /**
  * @brief stores information about wifi access point
  */
