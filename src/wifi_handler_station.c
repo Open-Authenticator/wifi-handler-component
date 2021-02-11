@@ -178,6 +178,9 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
         return WIFI_ERR_ALREADY_RUNNING;
     }
 
+    // set state of connected variable
+    is_connected = true;
+    
     // create event group for wifi state
     wifi_event_group = xEventGroupCreate();
 
@@ -260,9 +263,6 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
 
     // delete wifi event group.
     vEventGroupDelete(wifi_event_group);
-
-    // set state of connected variable
-    is_connected = true;
 
     // only if wifi is connected successfully return ESP_OK
     if (bits & WIFI_CONNECTED_BIT)

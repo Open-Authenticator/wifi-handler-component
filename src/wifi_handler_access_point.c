@@ -57,12 +57,14 @@ wifi_ap_record_t *scan_wifi_access_point()
 esp_err_t start_wifi_access_point(char *ssid, char *pass)
 {
     // if access point is already working, don't try to run this function
-
     if (is_connected)
     {
         ESP_LOGE(WIFI_TAG, "Access point already running, call stop_wifi_access_point() before calling this");
         return WIFI_ERR_ALREADY_RUNNING;
     }
+
+    // set state of connected variable
+    is_connected = true;
 
     // create event group for wifi state
     wifi_event_group = xEventGroupCreate();
@@ -136,8 +138,6 @@ esp_err_t start_wifi_access_point(char *ssid, char *pass)
 
     // delete wifi event group.
     vEventGroupDelete(wifi_event_group);
-
-    is_connected = true;
 
     // only if wifi is connected successfully return ESP_OK
     if (bits & WIFI_STA_CONNECTED_BIT)
