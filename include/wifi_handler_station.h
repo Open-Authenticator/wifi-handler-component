@@ -23,9 +23,10 @@
 #define WIFI_MAX_STATION_INFO_STRING_SIZE 1040 /*!< max size of station info string */
 #define WIFI_CONNECTED_BIT BIT0                /*!< used in event group, this bit represents connected bit */
 #define WIFI_FAIL_BIT BIT1                     /*!< used in event group, this bit represents the disconnected bit */
-#define WIFI_ERR_NOT_CONNECTED -2
-#define WIFI_ERR_ALREADY_RUNNING -3
-#define WIFI_ERR_STA_INFO -4
+#define WIFI_ERR_NOT_CONNECTED -2              /*!< error code if wifi failed to connect to any of the stored networks */
+#define WIFI_ERR_ALREADY_RUNNING -3            /*!< error code if wifi is already running and `start_wifi_station()` is called */ 
+#define WIFI_ERR_STA_INFO -4                   /*!< error code if wifi_station_info_json passed is invalid or larger than expected value */
+
 /**
  * @brief stores information about wifi access point
  */
@@ -64,7 +65,10 @@ wifi_ap_record_t *get_wifi_station_info();
  * 2) If it failed to connect to all wifi APs from the json string return ESP_FAIL
  * 
  * @param wifi_station_info_json json string which contains information about number of AP to which to try to connect to, and also their ssid and passwords
- * @return esp_err_t ESP_OK if connected successfully, ESP_FAIL if failed to connect to any AP
+ * @return esp_err_t ESP_OK if connected successfully, WIFI_ERR_ALREADY_RUNNING
+ * if wifi is already running, WIFI_ERR_STA_INFO if the given station info is
+ * incorrect, WIFI_ERR_NOT_CONNECTED if it couldn't connect to any wifi network
+ * given in the list
  */
 esp_err_t start_wifi_station(char *wifi_station_info_json);
 

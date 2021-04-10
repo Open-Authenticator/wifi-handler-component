@@ -8,7 +8,7 @@ static int wifi_station_array_index = 0;               /*!< variable which store
 static EventGroupHandle_t wifi_event_group;            /*!< wifi event group */
 static wifi_ap_record_t connected_station_info;        /*!< stores info about wifi AP currently connected */
 static esp_netif_t *wifi_sta_netif_handle = NULL;      /*!< sta netif handle, to be freed during stopping wifi */
-static bool is_connected = false;
+static bool is_connected = false;                      /*!< stores if devices is connected to a wifi network currently */
 
 static esp_err_t parse_wifi_station_info_json(const char *wifi_station_info_json)
 {
