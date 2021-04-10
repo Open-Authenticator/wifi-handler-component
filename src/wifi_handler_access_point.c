@@ -119,12 +119,16 @@ esp_err_t start_wifi_access_point(char *ssid, char *pass)
 
     // Wait until some station connects to the access point (WIFI_STA_CONNECTED_BIT) or no station has connected yet (WIFI_STA_DISCONNECTED_BIT).
     // The bits are set by event_handler() (see above)
-    EventBits_t bits = xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
-
+    EventBits_t bits = xEventGroupWaitBits(wifi_event_group, WIFI_STA_CONNECTED_BIT | WIFI_STA_STOP_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    
     // xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually happened.
     if (bits & WIFI_STA_CONNECTED_BIT)
     {
         ESP_LOGI(WIFI_TAG, "station connected to wifi access point (event_group)");
+    }
+    else if (bits & WIFI_STA_STOP_BIT)
+    {
+        ESP_LOGI(WIFI_TAG, "access point stopped before any connections (event_group)");
     }
     else
     {
@@ -138,7 +142,8 @@ esp_err_t start_wifi_access_point(char *ssid, char *pass)
 
     // delete wifi event group.
     vEventGroupDelete(wifi_event_group);
-
+    wifi_event_group = NULL;
+    
     // only if wifi is connected successfully return ESP_OK
     if (bits & WIFI_STA_CONNECTED_BIT)
     {
@@ -155,6 +160,11 @@ esp_err_t stop_wifi_access_point()
     {
         ESP_LOGE(WIFI_TAG, "Wifi access point not running, no need to stop it");
         return WIFI_ERR_ALREADY_RUNNING;
+    }
+
+    if (wifi_event_group != NULL)
+    {
+        xEventGroupSetBits(wifi_event_group, WIFI_STA_STOP_BIT);
     }
 
     free(wifi_station_array);

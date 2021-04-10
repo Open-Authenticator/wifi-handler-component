@@ -20,6 +20,7 @@
 #define WIFI_MAX_STA_CONN 1
 #define WIFI_SCAN_LIST_SIZE 10
 #define WIFI_STA_CONNECTED_BIT BIT0    /*!< used in event group, this bit represents connected bit */
+#define WIFI_STA_STOP_BIT BIT1         /*!< used in event group, this bit represents stop waiting for connection bit */
 #define WIFI_ERR_NOT_CONNECTED -2      /*!< error code if no device is connected to wifi AP */
 #define WIFI_ERR_ALREADY_RUNNING -3    /*!< error code if access points is already running and `start_wifi_access_point()` is called */
 
