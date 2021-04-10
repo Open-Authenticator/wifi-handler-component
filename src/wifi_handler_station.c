@@ -239,7 +239,7 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
 
     // Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
     // number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above)
-    EventBits_t bits = xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    EventBits_t bits = xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT | WIFI_STOP_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
     // xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually happened.
     if (bits & WIFI_CONNECTED_BIT)
@@ -249,6 +249,10 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
     else if (bits & WIFI_FAIL_BIT)
     {
         ESP_LOGI(WIFI_TAG, "Failed to connect to any wifi stations from ssid list passed to start_wifi_station()");
+    }
+    else if (bits & WIFI_STOP_BIT)
+    {
+        ESP_LOGI(WIFI_TAG, "wifi station stopped by host (event_group)");
     }
     else
     {
@@ -263,6 +267,7 @@ esp_err_t start_wifi_station(char *wifi_station_info_json)
 
     // delete wifi event group.
     vEventGroupDelete(wifi_event_group);
+    wifi_event_group = NULL;
 
     // only if wifi is connected successfully return ESP_OK
     if (bits & WIFI_CONNECTED_BIT)
@@ -280,6 +285,11 @@ esp_err_t stop_wifi_station()
     {
         ESP_LOGE(WIFI_TAG, "Wifi station not running, no need to stop it");
         return WIFI_ERR_ALREADY_RUNNING;
+    }
+
+    if (wifi_event_group != NULL)
+    {
+        xEventGroupSetBits(wifi_event_group, WIFI_STOP_BIT);
     }
 
     retry_count = 0;

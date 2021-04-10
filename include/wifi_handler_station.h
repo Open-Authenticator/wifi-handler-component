@@ -23,6 +23,7 @@
 #define WIFI_MAX_STATION_INFO_STRING_SIZE 1040 /*!< max size of station info string */
 #define WIFI_CONNECTED_BIT BIT0                /*!< used in event group, this bit represents connected bit */
 #define WIFI_FAIL_BIT BIT1                     /*!< used in event group, this bit represents the disconnected bit */
+#define WIFI_STOP_BIT BIT2                     /*!< used in event group, this bit represents the stop bit */
 #define WIFI_ERR_NOT_CONNECTED -2              /*!< error code if wifi failed to connect to any of the stored networks */
 #define WIFI_ERR_ALREADY_RUNNING -3            /*!< error code if wifi is already running and `start_wifi_station()` is called */ 
 #define WIFI_ERR_STA_INFO -4                   /*!< error code if wifi_station_info_json passed is invalid or larger than expected value */
